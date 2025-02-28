@@ -6,13 +6,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { baseURL } from "../../../config";
 import StudentDetailsByWeeklyTestId from "../../StudentDetailsByWeeklyTestId";
-import { getImprovedLevenshteinDistance } from "./levenshteinDistance";
 import { cosineSimilarity, tokenizeAndVectorize } from "./autoEvaluvateUtils";
 
 const StudentQuestionAnswer = () => {
   const { wt_id, student_id } = useParams();
   const [questionsWithAnswers, setQuestionsWithAnswers] = useState([]);
   const [correctAnswers, setCorrectAnswers] = useState({});
+  const [answerKeywords, setAnswerKeywords] = useState({});
   const [updatedMarks, setUpdatedMarks] = useState({});
   const [updatedComment, setUpdatedComment] = useState({});
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
@@ -42,6 +42,10 @@ const StudentQuestionAnswer = () => {
         setCorrectAnswers((prev) => ({
           ...prev,
           [question_id]: response.data.answer,
+        }));
+        setAnswerKeywords((prev) => ({
+          ...prev,
+          [question_id]: response.data.keywords, // Storing keywords
         }));
       })
       .catch(() => {
@@ -172,6 +176,8 @@ const StudentQuestionAnswer = () => {
       console.log(`Processing question ${index + 1}: ID ${item.question_id}`);
       const studentAnswer = item.studentAnswer.answer;
       const correctAnswer = correctAnswers[item.question_id];
+      const answerKeyword = answerKeywords[item.question_id]
+      console.log("keywords :", answerKeyword);
   
       if (studentAnswer && correctAnswer) {
         console.log(`Student Answer: ${studentAnswer}`);
@@ -185,7 +191,8 @@ const StudentQuestionAnswer = () => {
         const similarity = cosineSimilarity(studentVector, correctVector);
         console.log(`Computed Similarity: ${similarity.toFixed(2)}`);
         
-        const isCorrect = similarity >= 0.6; 
+        const threshold = answerKeyword === "1" ? 0.8 : 0.6;
+        const isCorrect = similarity >= threshold;
         console.log(`Is Answer Correct? ${isCorrect}`);
   
         const marks = isCorrect ? item.marks : 0;
@@ -243,6 +250,9 @@ const StudentQuestionAnswer = () => {
       <Row>
         <Col md={9} className="overflow-auto" style={{ maxHeight: "100vh" }}>
           <StudentDetailsByWeeklyTestId />
+          <Button variant="primary" onClick={autoEvaluateAnswers} className="my-3 mx-3" title="Automated Evaluation">
+            Automated Evaluation 
+          </Button>
           <ToastContainer />
           <h2 className="mb-4">Student Answer Details</h2>
 
@@ -352,9 +362,7 @@ const StudentQuestionAnswer = () => {
             </div>
           </Collapse>
 
-          <Button variant="primary" onClick={autoEvaluateAnswers} className="my-3 mx-3">
-            Auto Evaluate Answers
-          </Button>
+          
         </Col>
 
         <Col md={3} className="overflow-auto" style={{ maxHeight: "100vh" }}>
